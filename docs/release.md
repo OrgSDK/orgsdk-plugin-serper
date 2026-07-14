@@ -2,9 +2,21 @@
 
 ## Current state: no production side effects
 
-This repository has **no publish credentials** and **no catalog-publishing
-workflow**. The CI pipeline produces a local artifact (`dist/`) uploaded as
-a GitHub Actions artifact — nothing leaves GitHub.
+This repository has **no publish credentials**. The CI pipeline produces a
+local artifact (`dist/`) uploaded as a GitHub Actions artifact. The catalog
+publish workflow (`publish-catalog.yml`) is **manual only** — it never runs
+on pushes or tags.
+
+## Version policy
+
+- **Current version:** `1.1.3` (first external-source release).
+- Catalog v1.1.2 remains retained and usable from prior catalog state.
+- The manifest version (`.plugin.json` → `version`) is the **source of
+  truth** for the catalog. Bump it on every behavior change.
+- Versions are **write-once** in the catalog: re-publishing the same
+  `(slug, version)` with identical content is idempotent; different content
+  is rejected with HTTP 409. Legacy versions with no checksum are treated
+  as immutable/unknown — always bump the version.
 
 ## The artifact
 
@@ -18,47 +30,28 @@ dist/
 │   ├── index.ts
 │   ├── auth-provider.ts
 │   ├── serper-functions.ts
-│   ├── contract.ts
 │   └── docs/overview.md
-├── serper-<version>.manifest.json  # file list + SHA-256 checksums (sorted)
-└── serper-<version>.tgz            # tarball of the plugin folder
+├── serper-1.1.3.manifest.json      # file list + SHA-256 checksums (sorted)
+└── serper-1.1.3.tgz                # tarball of the plugin folder
 ```
 
-The generated `package.json` inside `dist/serper/` carries only the plugin's
-runtime dependencies (from the repo root `package.json` → `dependencies`).
-No devDependencies, scripts, or private flag. The catalog's `readPluginFolder`
-reads this to resolve deps at materialise time.
-
 Packaging is deterministic: `dist/` is fully removed and recreated on every
-run (stale files cannot survive), and file traversal + manifest entries are
-sorted by path.
+run. The generated `package.json` carries only `zod` as a runtime dependency
+(no `@orgsdk/plugins` — type-only imports are erased).
 
-## Future catalog promotion (protected, manual)
+## Catalog promotion (manual, authenticated)
 
-When the catalog cutover safety work ships, a **protected** promotion step
-will be added. Expected contract:
+The `publish-catalog.yml` workflow is triggered manually via
+`workflow_dispatch`:
 
-1. **Trigger:** manual `workflow_dispatch` on a tagged release
-   (`v<version>`), not on every push.
-2. **Gate:** the workflow runs in an environment with catalog admin
-   credentials (stored as GitHub secrets, not in the repo).
-3. **Action:** `POST /api/plugins` with the artifact tarball (or the file
-   set) and an admin JWT — the same route the monorepo's
-   `scripts/publish-plugin.ts` calls.
-4. **Visibility:** the workflow does NOT push to tenants. Publish is
-   catalog-only — installed tenants stay pinned to their current version
-   until they update.
-5. **Audit:** the platform logs a `plugin.publish` event with slug + version.
+1. **Dry-run (default):** packages, validates, uploads the artifact. Does
+   NOT require `ORGSDK_PUBLISH_TOKEN`.
+2. **Real publish:** select `dry_run = false`. Requires
+   `ORGSDK_PUBLISH_TOKEN` secret (admin JWT) and `ORGSDK_CATALOG_URL`
+   variable in the `catalog-publish` environment. Fails clearly if the
+   secret is absent.
 
-This step is intentionally **not** implemented in this pass. The artifact
-produced by CI is the input the future promotion workflow will consume.
-
-## Version policy
-
-- The manifest version (`.plugin.json` → `version`) is the **source of
-  truth** for the catalog. Bump it on every behavior change.
-- Versions are **write-once** in the catalog's history table
-  (`platform_plugin_versions`): re-publishing the same version updates
-  mutable fields (manifest, fileCount) but does not create a new entry.
-- There is no rollback path yet (install-by-version is future work). Treat
-  every publish as forward-only.
+The workflow posts the artifact to `POST /api/plugins`. The server enforces
+write-once: same `(slug, version)` with identical content is idempotent;
+different content returns HTTP 409. Existing tenants stay pinned to their
+current version until they update.
