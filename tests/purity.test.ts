@@ -1,9 +1,11 @@
 /**
- * Source purity guard — mirrors the monorepo's
- * lifecycle.plugin-source-purity.test.ts but scoped to this repo's plugin/ folder.
+ * Source purity guard — ensures the plugin has no runtime dependency on
+ * private OrgSDK packages and that @orgsdk/plugins is imported type-only.
  *
- * Ensures the plugin has no runtime dependency on private OrgSDK packages
- * and that the local contract shim is type-only.
+ * The public authoring SDK (@orgsdk/plugins) is permitted as a dev-only,
+ * type-only import — it ships types, not runtime code. All other
+ * @orgsdk/* or orgsdk/* specifiers are forbidden (they would couple the
+ * plugin to private daemon/platform/storage internals).
  */
 import { describe, expect, it } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
@@ -11,11 +13,16 @@ import { join, relative, resolve } from "node:path";
 
 const PLUGIN_DIR = resolve(import.meta.dir, "..", "plugin");
 
-const FORBIDDEN_SPECIFIERS =
+/** Any import from a private @orgsdk/* or orgsdk/* package. */
+const FORBIDDEN_SPECIFIER =
 	/(?:^|\n)\s*import\b[^;]*?from\s+["']((?:@orgsdk\/|orgsdk\/)[^"']+)["']/g;
 
-const CONTRACT_VALUE_IMPORT =
-	/(?:^|\n)\s*import\s+(?!type\b)\{[^}]*\}\s+from\s+["']\.\/contract["']/;
+/**
+ * A value (non-type) import from @orgsdk/plugins — forbidden because the
+ * SDK is dev-only; the runtime artifact must not depend on it.
+ */
+const SDK_VALUE_IMPORT =
+	/(?:^|\n)\s*import\s+(?!type\b)\{[^}]*\}\s+from\s+["']@orgsdk\/plugins["']/;
 
 async function collectTsFiles(dir: string): Promise<string[]> {
 	const out: string[] = [];
@@ -31,17 +38,22 @@ async function collectTsFiles(dir: string): Promise<string[]> {
 }
 
 describe("source purity", () => {
-	it("no plugin source imports an @orgsdk/* or orgsdk/* internal package", async () => {
+	it("no plugin source imports a private @orgsdk/* or orgsdk/* package", async () => {
 		const files = await collectTsFiles(PLUGIN_DIR);
 		expect(files.length).toBeGreaterThan(0);
 
 		const offenders: Array<{ file: string; specifier: string }> = [];
 		for (const file of files) {
 			const src = await readFile(file, "utf-8");
-			for (const match of src.matchAll(FORBIDDEN_SPECIFIERS)) {
+			for (const match of src.matchAll(FORBIDDEN_SPECIFIER)) {
+				const spec = match[1];
+				// Allow @orgsdk/plugins (checked separately below).
+				if (spec === "@orgsdk/plugins" || spec.startsWith("@orgsdk/plugins/")) {
+					continue;
+				}
 				offenders.push({
 					file: relative(PLUGIN_DIR, file),
-					specifier: match[1],
+					specifier: spec,
 				});
 			}
 		}
@@ -49,15 +61,13 @@ describe("source purity", () => {
 		expect(offenders).toEqual([]);
 	});
 
-	it("the contract shim is imported type-only everywhere", async () => {
+	it("@orgsdk/plugins is imported type-only everywhere (no runtime value imports)", async () => {
 		const files = await collectTsFiles(PLUGIN_DIR);
 		const offenders: string[] = [];
 
 		for (const file of files) {
 			const src = await readFile(file, "utf-8");
-			// Skip the shim itself.
-			if (file.endsWith("contract.ts")) continue;
-			if (CONTRACT_VALUE_IMPORT.test(src)) {
+			if (SDK_VALUE_IMPORT.test(src)) {
 				offenders.push(relative(PLUGIN_DIR, file));
 			}
 		}
@@ -71,7 +81,6 @@ describe("source purity", () => {
 
 		for (const file of files) {
 			const src = await readFile(file, "utf-8");
-			// Match any import from a parent directory (../)
 			const parentImport = /from\s+["']\.\.[/"']/;
 			if (parentImport.test(src)) {
 				offenders.push(relative(PLUGIN_DIR, file));

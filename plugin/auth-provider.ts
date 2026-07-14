@@ -1,4 +1,4 @@
-import type { AuthProvider, PluginContext } from "./contract";
+import type { AuthProvider, PluginContext } from "@orgsdk/plugins";
 
 export class SerperAuthProvider implements AuthProvider {
 	readonly type = "token" as const;

@@ -10,7 +10,7 @@ import type {
 	AuthProvider,
 	PluginContext,
 	PluginModule,
-} from "../plugin/contract";
+} from "@orgsdk/plugins";
 
 const noopCtx: PluginContext = {
 	stores: {

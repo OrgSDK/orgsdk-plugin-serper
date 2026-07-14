@@ -1,4 +1,4 @@
-import type { SafeFunction } from "./contract";
+import type { SafeFunction } from "@orgsdk/plugins";
 
 export const moduleDescription =
 	"Search Google via Serper.dev API. Returns organic results, knowledge graph, answer boxes, and more.";

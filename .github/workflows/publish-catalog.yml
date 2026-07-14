@@ -1,0 +1,89 @@
+name: Publish to Catalog
+
+# Authenticated catalog publish — posts the validated plugin artifact to the
+# OrgSDK platform catalog API. This workflow NEVER publishes automatically on
+# ordinary pushes. It runs only on:
+#   - workflow_dispatch (manual trigger from the Actions tab)
+#   - Tag push matching v*.*.* (release tags)
+#
+# Required secrets:
+#   ORGSDK_PUBLISH_TOKEN — admin JWT for the platform API (secret)
+# Required variables (non-secret):
+#   ORGSDK_CATALOG_URL   — platform base URL (e.g. https://app.orgsdk.ai)
+#
+# The workflow defaults to dry-run. Select "Publish" from the workflow_dispatch
+# inputs to perform a real publish. Without the token secret, the job fails
+# clearly.
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run only (do not POST to catalog)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: catalog-publish
+    steps:
+      # actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      # oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@7ee09f6d25d5974c1c06df967dc3afeca364f283
+        with:
+          bun-version: 1.3.9
+
+      - name: Install dependencies (frozen)
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck + lint + tests
+        run: |
+          bun run typecheck
+          bun run check
+          bun run test
+
+      - name: Validate + package
+        run: bun run build
+
+      - name: Verify publish token is present
+        env:
+          ORGSDK_PUBLISH_TOKEN: ${{ secrets.ORGSDK_PUBLISH_TOKEN }}
+        run: |
+          if [ -z "$ORGSDK_PUBLISH_TOKEN" ]; then
+            echo "::error::ORGSDK_PUBLISH_TOKEN secret is not set. Catalog publish requires explicit authentication."
+            exit 1
+          fi
+
+      - name: Publish to catalog
+        env:
+          ORGSDK_PUBLISH_TOKEN: ${{ secrets.ORGSDK_PUBLISH_TOKEN }}
+          ORGSDK_CATALOG_URL: ${{ vars.ORGSDK_CATALOG_URL }}
+          DRY_RUN_INPUT: ${{ github.event.inputs.dry_run }}
+        run: |
+          # Tag pushes always publish; manual dispatch respects the input.
+          if [ "${{ github.event_name }}" = "push" ]; then
+            FLAGS="--publish"
+          elif [ "$DRY_RUN_INPUT" = "false" ]; then
+            FLAGS="--publish"
+          else
+            FLAGS=""
+          fi
+          bun run scripts/publish-catalog.ts --url "$ORGSDK_CATALOG_URL" $FLAGS
+
+      # actions/upload-artifact@v4 — keep the staged artifact for audit
+      - name: Upload staged artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: plugin-serper-${{ github.sha }}
+          path: dist/
+          retention-days: 30

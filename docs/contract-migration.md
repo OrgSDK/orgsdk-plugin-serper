@@ -1,63 +1,42 @@
-# Contract migration plan
+# Contract migration — completed
 
-## Current state
+## Status: migrated to `@orgsdk/plugins`
 
-This repository ships a **temporary type-only shim** at
-`plugin/contract.ts` that mirrors the public plugin authoring types
-re-exported by `orgsdk/plugins` in the main OrgSDK monorepo.
+This plugin now imports its authoring types from the public
+[`@orgsdk/plugins`](https://github.com/OrgSDK/plugins) package instead of a
+local shim. The migration is complete:
 
-The shim exists so that this plugin can be developed, typechecked, and tested
-as a standalone package **without** a runtime or build-time dependency on
-private daemon/platform packages (`@orgsdk/daemon`, `@orgsdk/storage`,
-`@orgsdk/shared`, etc.).
+1. **`plugin/contract.ts` deleted** — the temporary type-only shim is gone.
+2. **All imports updated** — `from "./contract"` → `from "@orgsdk/plugins"`.
+3. **devDependency pinned** to the public GitHub repo at an immutable commit
+   (`github:OrgSDK/plugins#da5ae72…`) until npm publication of v0.1.0.
+4. **Purity guards updated** — type-only imports from `@orgsdk/plugins` are
+   allowed; value imports and all other `@orgsdk/*` packages are still blocked.
+5. **Artifact purity** — the runtime artifact's `package.json` contains `zod`
+   but NOT `@orgsdk/plugins` (type-only imports are erased at compile time).
 
-Every export in `plugin/contract.ts` is a TypeScript type — no runtime values.
-At daemon load time the real `PluginContext` (stores, logger, base URL) is
-injected via the factory function; the shim is erased at compile time.
+## Why `@orgsdk/plugins`?
 
-## Why a local shim instead of a package?
+The package provides the stable, minimal, structural TypeScript contract
+between plugin authors and the OrgSDK daemon — with no private daemon,
+platform, storage, or database internals. It is Apache-2.0 licensed and
+designed for third-party use. See
+[OrgSDK/plugins](https://github.com/OrgSDK/plugins) for the full API surface.
 
-The planned **`@orgsdk/plugin-contract`** types-only npm package does not
-exist yet. Rather than block external plugin development on its publication,
-we ship a minimal, documented, faithful copy of the authoring surface that
-can be replaced mechanically when the real package lands.
+## Type-only contract
 
-## What's in the shim
+All imports from `@orgsdk/plugins` are `import type { … }` — erased at
+compile time. The runtime plugin artifact carries only `zod` as a dependency.
+This means:
+- No runtime weight from the authoring SDK.
+- No Zod dual-package risk (the daemon provides the Zod instance).
+- Plugin source typechecks against the same contract the daemon enforces.
 
-Exactly the public authoring surface — nothing internal:
+## Moving to npm
 
-- Store interfaces (`CredentialStore`, `ConfigStore`) — structural, matching
-  `@orgsdk/storage`.
-- `PluginLogger` — a structural logger type (avoids a hard `pino` dependency).
-- `PluginContext`, `PluginModule`, `PluginFactory`.
-- `AuthProvider`, `AuthMeta`, `HttpEndpoint`.
-- `SafeFunction` and its metadata/docs types.
-- `PluginConfigDefinition`, `PluginManifest`, `PluginTableSchema`.
+Once `@orgsdk/plugins@0.1.0` is published to npm, replace the GitHub pin:
 
-No daemon internals, no sandbox types, no store implementations, no schema
-table definitions.
-
-## Migration when @orgsdk/plugin-contract ships
-
-1. `bun add @orgsdk/plugin-contract` (types-only — `devDependencies`).
-2. Search-replace `from "./contract"` → `from "@orgsdk/plugin-contract"`
-   across `plugin/**/*.ts`.
-3. Delete `plugin/contract.ts`.
-4. Update `tests/purity.test.ts` to allow the new specifier.
-5. Update `scripts/validate-plugin.ts` to allow `@orgsdk/plugin-contract`
-   (it's type-only, like the current shim).
-6. `bun run build` — should pass with zero source changes beyond the import
-   path.
-
-The shim is designed so that step 2 is a mechanical find-and-replace with no
-semantic changes. All type names, field shapes, and export names match the
-monorepo source 1:1.
-
-## Provenance
-
-| Field | Value |
-|---|---|
-| Sourced from | `packages/daemon/src/plugins/{module-types,types}.ts` |
-| Storage interfaces from | `packages/storage/src/interfaces/{credential,config}-store.ts` |
-| Monorepo HEAD at extraction | `494ae227975b186e17365e2e448557ad45b6df98` |
-| Serper source extracted at | `608a151686a79b4375f1ea4ffb8cc024c5fb5a23` |
+```diff
+- "@orgsdk/plugins": "github:OrgSDK/plugins#da5ae72…"
++ "@orgsdk/plugins": "^0.1.0"
+```
