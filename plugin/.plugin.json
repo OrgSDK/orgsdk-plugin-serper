@@ -1,0 +1,29 @@
+{
+	"name": "serper",
+	"version": "1.1.2",
+	"description": "Google Search via Serper.dev — organic results, news, images, knowledge graph, and answer boxes",
+	"entry": "index.ts",
+	"auth": {
+		"type": "token",
+		"provider": "serper",
+		"label": "Serper.dev API key",
+		"hint": "Create a key at serper.dev."
+	},
+	"marketplace": {
+		"displayName": "Serper",
+		"category": "Search & Research",
+		"tagline": "Google Search for agents — organic results, news, images, knowledge graph, and full-page scraping for research workflows.",
+		"tags": ["search", "research"],
+		"useCases": [
+			"Research a topic and synthesize an answer with sources",
+			"Monitor news and results for a keyword on a schedule",
+			"Scrape pages to enrich a lead or competitor profile",
+			"Find images and source links for content workflows"
+		],
+		"permissionsSummary": "Read-only web search and page scraping via the Serper.dev API key. No write or destructive actions.",
+		"links": {
+			"homepage": "https://serper.dev",
+			"docs": "https://serper.dev/playground"
+		}
+	}
+}
