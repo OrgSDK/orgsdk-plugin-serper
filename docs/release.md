@@ -14,14 +14,24 @@ a GitHub Actions artifact — nothing leaves GitHub.
 dist/
 ├── serper/                         # staged plugin folder (slug-named)
 │   ├── .plugin.json
+│   ├── package.json                # generated: name, version, type, runtime deps only
 │   ├── index.ts
 │   ├── auth-provider.ts
 │   ├── serper-functions.ts
 │   ├── contract.ts
 │   └── docs/overview.md
-├── serper-<version>.manifest.json  # file list + SHA-256 checksums
+├── serper-<version>.manifest.json  # file list + SHA-256 checksums (sorted)
 └── serper-<version>.tgz            # tarball of the plugin folder
 ```
+
+The generated `package.json` inside `dist/serper/` carries only the plugin's
+runtime dependencies (from the repo root `package.json` → `dependencies`).
+No devDependencies, scripts, or private flag. The catalog's `readPluginFolder`
+reads this to resolve deps at materialise time.
+
+Packaging is deterministic: `dist/` is fully removed and recreated on every
+run (stale files cannot survive), and file traversal + manifest entries are
+sorted by path.
 
 ## Future catalog promotion (protected, manual)
 

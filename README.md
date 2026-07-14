@@ -114,4 +114,7 @@ catalog cutover safety work ships.
 
 ## License
 
-MIT
+Proprietary — All rights reserved. This source is the confidential property
+of OrgSDK. No part of this repository may be reproduced, distributed, or
+transmitted in any form without the prior written permission of OrgSDK.
+Unauthorized use, modification, or redistribution is strictly prohibited.
