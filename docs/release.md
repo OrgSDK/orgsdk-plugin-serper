@@ -78,7 +78,7 @@ plugin repo is an acceptable cost.
 
 ## Version policy
 
-- **Current version:** `1.1.5`.
+- **Current version:** `1.1.6`.
 - The manifest version (`plugin/.plugin.json` → `version`) is the **source of
   truth** for the catalog. `package.json` → `version` is kept in sync (enforced
   by the CI version guard).
@@ -89,6 +89,24 @@ plugin repo is an acceptable cost.
 - Versions are **write-once** in the catalog: re-publishing the same
   `(slug, version)` with identical content is idempotent; different content is
   rejected with HTTP 409. Always bump the version for changed content.
+
+### 1.1.6 — clean deterministic-bundling artifact-format release
+
+`1.1.6` is a forward-only patch release that supersedes the **pre-fix** `1.1.5`
+artifact now that **deterministic server-side bundling** is deployed. No plugin
+source behavior changed — the safe functions, auth provider, manifest shape, and
+runtime dependencies are identical to `1.1.5`.
+
+`1.1.5` was published to accommodate the catalog's server-side
+runtime-dependency bundling step, but that step was **not yet deterministic** at
+the time `1.1.5` was published. Deterministic bundling has since been deployed.
+Because catalog versions are write-once, the pre-fix `1.1.5` artifact cannot be
+re-published with the now-deterministic content — it would differ and be
+rejected with HTTP 409. Rather than mutate the published history of `1.1.5`, the
+deterministic-bundled artifact lands as a fresh `1.1.6` entry that supersedes
+`1.1.5`. The `1.1.6` artifact is byte-for-byte reproducible: a follow-up real
+publish of `1.1.6` is idempotent (HTTP 201), proving the production bundling is
+deterministic.
 
 ### 1.1.5 — release-pipeline artifact-format change
 
@@ -126,8 +144,8 @@ dist/
 │   ├── auth-provider.ts
 │   ├── serper-functions.ts
 │   └── docs/overview.md
-├── serper-1.1.5.manifest.json      # file list + SHA-256 checksums (sorted)
-└── serper-1.1.5.tgz                # tarball of the plugin folder
+├── serper-1.1.6.manifest.json      # file list + SHA-256 checksums (sorted)
+└── serper-1.1.6.tgz                # tarball of the plugin folder
 ```
 
 Packaging is deterministic: `dist/` is fully removed and recreated on every
