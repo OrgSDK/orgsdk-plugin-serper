@@ -7,7 +7,9 @@ automatically performs a **real, authenticated** catalog publish — **but only
 when the repo variable `ORGSDK_ENABLE_CATALOG_PUBLISH` is set to `true`**.
 There is no manual publish step for normal releases.
 
-The `publish-catalog.yml` workflow triggers on `push` to `main` for these
+The `publish-catalog.yml` workflow calls the centrally maintained reusable
+catalog-publish workflow in [OrgSDK/plugins](https://github.com/OrgSDK/plugins)
+(pinned to an immutable commit). It triggers on `push` to `main` for these
 paths:
 
 - `plugin/**` — the shipped plugin source (the staged artifact).
@@ -76,12 +78,12 @@ plugin repo is an acceptable cost.
 
 ## Version policy
 
-- **Current version:** `1.1.3`.
+- **Current version:** `1.1.4`.
 - The manifest version (`plugin/.plugin.json` → `version`) is the **source of
   truth** for the catalog. `package.json` → `version` is kept in sync (enforced
   by the CI version guard).
 - Bump the version on **every** publishable content change. The CI version
-  guard (`scripts/check-version-bump.ts`, run as `bun run version-guard`)
+  guard (`orgsdk-plugin version-guard`, run as `bun run version-guard`)
   fails a PR/commit if publishable content changed but the manifest version
   did not. Docs/workflow/scripts-only changes do **not** require a bump.
 - Versions are **write-once** in the catalog: re-publishing the same
@@ -108,8 +110,8 @@ dist/
 │   ├── auth-provider.ts
 │   ├── serper-functions.ts
 │   └── docs/overview.md
-├── serper-1.1.3.manifest.json      # file list + SHA-256 checksums (sorted)
-└── serper-1.1.3.tgz                # tarball of the plugin folder
+├── serper-1.1.4.manifest.json      # file list + SHA-256 checksums (sorted)
+└── serper-1.1.4.tgz                # tarball of the plugin folder
 ```
 
 Packaging is deterministic: `dist/` is fully removed and recreated on every

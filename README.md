@@ -11,8 +11,8 @@ and full-page scraping for research workflows.
 ```
 orgsdk-plugin-serper/
 ├── .github/workflows/
-│   ├── ci.yml                 # CI: install, lint, typecheck, test, validate, package, version guard
-│   └── publish-catalog.yml    # auto-publish to catalog on main (opt-in); manual dry-run
+│   ├── ci.yml                 # calls the shared reusable CI workflow (OrgSDK/plugins)
+│   └── publish-catalog.yml    # calls the shared reusable publish workflow (opt-in; manual dry-run)
 ├── plugin/                    # the publishable plugin folder
 │   ├── .plugin.json           # manifest (slug, version, auth, marketplace)
 │   ├── index.ts               # entry — factory(ctx) → PluginModule
@@ -20,7 +20,6 @@ orgsdk-plugin-serper/
 │   ├── serper-functions.ts    # safe functions: search, newsSearch, imageSearch, scrapeUrl
 │   └── docs/overview.md       # plugin-local docs
 ├── tests/                     # bun:test — manifest, source purity, plugin shape
-├── scripts/                   # validate-plugin, package-plugin, publish-catalog, check-version-bump
 ├── docs/                      # contract migration, release/promotion contract
 ├── package.json
 ├── tsconfig.json
@@ -50,15 +49,19 @@ bun run typecheck
 # Run tests
 bun run test
 
-# Validate manifest + source purity
+# Validate manifest + source purity (orgsdk-plugin validate)
 bun run validate
 
-# Stage distributable artifact into dist/
+# Stage distributable artifact into dist/ (orgsdk-plugin package)
 bun run package
 
 # Full build pipeline (typecheck → validate → package)
 bun run build
 ```
+
+The `validate`, `package`, `version-guard`, and `publish` npm scripts delegate to
+the [`orgsdk-plugin`](https://www.npmjs.com/package/@orgsdk/plugins) CLI shipped
+by the `@orgsdk/plugins` dev dependency. There are no local management scripts.
 
 ## Functions
 
@@ -83,6 +86,16 @@ All functions require the `serper` credential (API key).
   rejected (HTTP 409). Treat every publish as forward-only.
 - See [docs/release.md](docs/release.md) for the automatic publish model and
   required repository settings.
+
+## CI/CD
+
+CI and catalog publishing delegate to centrally maintained **reusable
+workflows** in [OrgSDK/plugins](https://github.com/OrgSDK/plugins), pinned to an
+immutable commit. The caller workflows (`.github/workflows/`) only wire up
+triggers, the opt-in gate, artifact names, and secrets — no plugin mechanics are
+duplicated. See the
+[reusable-workflows docs](https://github.com/OrgSDK/plugins/blob/main/docs/reusable-workflows.md)
+for the full contract.
 
 ## Security constraints
 
