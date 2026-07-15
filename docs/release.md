@@ -48,7 +48,7 @@ These are configured in GitHub **repo Settings**, not in the repo files:
 |---|---|---|
 | `ORGSDK_ENABLE_CATALOG_PUBLISH` | Settings → Secrets and variables → **Variables** | `true` (opt in to publishing) |
 | `ORGSDK_CATALOG_URL` | Settings → Secrets and variables → **Variables** | `https://app.orgsdk.ai` |
-| `ORGSDK_PUBLISH_TOKEN` | repository secret **or** `catalog-publish` environment secret | admin JWT (secret) |
+| `ORGSDK_PUBLISH_TOKEN` | repository secret **or** `catalog-publish` environment secret | scoped catalog publisher token (secret) |
 | `catalog-publish` environment | Settings → Environments | deployment branches restricted to `main` (see below) |
 
 Environment configuration for `catalog-publish` (fully automatic publishing):
