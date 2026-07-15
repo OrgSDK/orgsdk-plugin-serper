@@ -78,7 +78,7 @@ plugin repo is an acceptable cost.
 
 ## Version policy
 
-- **Current version:** `1.1.4`.
+- **Current version:** `1.1.5`.
 - The manifest version (`plugin/.plugin.json` → `version`) is the **source of
   truth** for the catalog. `package.json` → `version` is kept in sync (enforced
   by the CI version guard).
@@ -89,6 +89,22 @@ plugin repo is an acceptable cost.
 - Versions are **write-once** in the catalog: re-publishing the same
   `(slug, version)` with identical content is idempotent; different content is
   rejected with HTTP 409. Always bump the version for changed content.
+
+### 1.1.5 — release-pipeline artifact-format change
+
+`1.1.5` is a forward-only patch release that accommodates a **server-side
+runtime-dependency bundling** change deployed to the catalog publish path. No
+plugin source behavior changed — the safe functions, auth provider, manifest
+shape, and runtime dependencies are identical to `1.1.4`.
+
+The catalog deployed a new bundling step that changes how the staged artifact
+is computed for an existing version. Because catalog versions are write-once
+(see above), the artifact stored for `serper 1.1.4` can no longer be
+re-published with the new bundling — it would differ in content and be rejected
+with HTTP 409. Rather than mutate the published history of `1.1.4`, the new
+artifact format lands as a fresh `1.1.5` entry. This is the supported
+resolution: treat every publish as forward-only and bump on any artifact
+content change, including one driven by the release pipeline itself.
 
 ## Manual dry-run / recovery
 
@@ -110,8 +126,8 @@ dist/
 │   ├── auth-provider.ts
 │   ├── serper-functions.ts
 │   └── docs/overview.md
-├── serper-1.1.4.manifest.json      # file list + SHA-256 checksums (sorted)
-└── serper-1.1.4.tgz                # tarball of the plugin folder
+├── serper-1.1.5.manifest.json      # file list + SHA-256 checksums (sorted)
+└── serper-1.1.5.tgz                # tarball of the plugin folder
 ```
 
 Packaging is deterministic: `dist/` is fully removed and recreated on every

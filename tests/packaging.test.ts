@@ -68,7 +68,7 @@ describe("packaging", () => {
 		>;
 
 		expect(pkg.name).toBe("@orgsdk/plugin-serper");
-		expect(pkg.version).toBe("1.1.4");
+		expect(pkg.version).toBe("1.1.5");
 		expect(pkg.type).toBe("module");
 		expect(pkg.dependencies).toBeDefined();
 		expect((pkg.dependencies as Record<string, string>).zod).toBeDefined();
