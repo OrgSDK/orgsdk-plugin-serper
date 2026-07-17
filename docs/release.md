@@ -78,7 +78,7 @@ plugin repo is an acceptable cost.
 
 ## Version policy
 
-- **Current version:** `1.1.6`.
+- **Current version:** `1.1.7`.
 - The manifest version (`plugin/.plugin.json` → `version`) is the **source of
   truth** for the catalog. `package.json` → `version` is kept in sync (enforced
   by the CI version guard).
@@ -89,6 +89,27 @@ plugin repo is an acceptable cost.
 - Versions are **write-once** in the catalog: re-publishing the same
   `(slug, version)` with identical content is idempotent; different content is
   rejected with HTTP 409. Always bump the version for changed content.
+
+### 1.1.7 — provenance (`marketplace.links.sourceRepo`) release
+
+`1.1.7` is a forward-only patch release that brings Serper to provenance parity
+with every other external OrgSDK plugin. No plugin source behavior changed —
+the safe functions, auth provider, manifest auth shape, config schema, and
+runtime dependency (`zod` only) are identical to `1.1.6`.
+
+`1.1.6` was published without `marketplace.links.sourceRepo` and (its publish
+predating the catalog's server-side action enrichment) carries a `null` catalog
+`actions` summary. Adding `sourceRepo` changes the immutable publishable
+content of the staged artifact. Because catalog versions are write-once, the
+`1.1.6` artifact on record cannot be re-published with this changed content —
+it would differ and be rejected with HTTP 409. Rather than mutate the published
+history of `1.1.6`, the new artifact lands as a fresh `1.1.7` entry.
+
+The `1.1.7` publish also re-enters the manifest through the catalog's current
+`enrichWithActions` step, so the catalog `actions` summary for `serper` is
+populated (4 read-only functions with descriptions) for the first time. The
+`1.1.7` artifact is byte-for-byte reproducible: a follow-up real publish of
+`1.1.7` is idempotent (HTTP 201), proving source-basis determinism.
 
 ### 1.1.6 — clean deterministic-bundling artifact-format release
 
@@ -144,8 +165,8 @@ dist/
 │   ├── auth-provider.ts
 │   ├── serper-functions.ts
 │   └── docs/overview.md
-├── serper-1.1.6.manifest.json      # file list + SHA-256 checksums (sorted)
-└── serper-1.1.6.tgz                # tarball of the plugin folder
+├── serper-1.1.7.manifest.json      # file list + SHA-256 checksums (sorted)
+└── serper-1.1.7.tgz                # tarball of the plugin folder
 ```
 
 Packaging is deterministic: `dist/` is fully removed and recreated on every

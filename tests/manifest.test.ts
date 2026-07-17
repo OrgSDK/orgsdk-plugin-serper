@@ -45,4 +45,15 @@ describe("manifest", () => {
 		expect(mp.category).toBe("Search & Research");
 		expect(Array.isArray(mp.tags)).toBe(true);
 	});
+
+	it("declares marketplace links with the source-repo provenance link", async () => {
+		const m = await readManifest();
+		const mp = m.marketplace as Record<string, unknown>;
+		const links = mp.links as Record<string, string>;
+		expect(links.sourceRepo).toBe(
+			"https://github.com/OrgSDK/orgsdk-plugin-serper",
+		);
+		expect(links.homepage).toBe("https://serper.dev");
+		expect(links.docs).toBe("https://serper.dev/playground");
+	});
 });
