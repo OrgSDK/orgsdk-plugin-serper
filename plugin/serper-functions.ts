@@ -1,4 +1,5 @@
 import type { SafeFunction } from "@orgsdk/plugins";
+import { fetchJson } from "./http-client";
 
 export const moduleDescription =
 	"Search Google via Serper.dev API. Returns organic results, knowledge graph, answer boxes, and more.";
@@ -118,7 +119,7 @@ async function serperRequest(
 	baseUrl = "https://google.serper.dev",
 ): Promise<unknown> {
 	const url = endpoint ? `${baseUrl}/${endpoint}` : `${baseUrl}/`;
-	const resp = await fetch(url, {
+	return fetchJson(url, {
 		method: "POST",
 		headers: {
 			"X-API-KEY": apiKey,
@@ -126,13 +127,6 @@ async function serperRequest(
 		},
 		body: JSON.stringify(body),
 	});
-
-	if (!resp.ok) {
-		const errText = await resp.text();
-		throw new Error(`Serper API error ${resp.status}: ${errText}`);
-	}
-
-	return resp.json();
 }
 
 function buildSearchParams(params: SearchParams): Record<string, unknown> {
